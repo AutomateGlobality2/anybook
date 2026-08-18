@@ -1,0 +1,48 @@
+name: Deploy AnyBook to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile || bun install
+      - name: Build static site
+        env:
+          # Set this repo variable to the Lovable app URL that serves the AI API.
+          VITE_ANYBOOK_API: ${{ vars.ANYBOOK_API || 'https://hubup-playpen.lovable.app' }}
+          VITE_HUB_ORIGIN: ${{ vars.HUB_ORIGIN || 'https://hubup.online' }}
+        run: |
+          bun run build:static
+          mv dist-static/index.static.html dist-static/index.html
+          cp dist-static/index.html dist-static/404.html
+          cp -r public/* dist-static/ 2>/dev/null || true
+          touch dist-static/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist-static
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
