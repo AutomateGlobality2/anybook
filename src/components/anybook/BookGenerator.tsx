@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BookOpen, Loader2, Sparkles, Timer } from "lucide-react";
 import { toast } from "sonner";
 
@@ -52,6 +52,13 @@ export function BookGenerator({
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState("");
   const [left, setLeft] = useState<number | null>(null);
+
+  // Show the real remaining free time for today (localStorage is client-only).
+  useEffect(() => {
+    setLeft(secondsLeft());
+  }, []);
+
+
 
   async function run() {
     if (!title.trim()) {
@@ -108,11 +115,11 @@ export function BookGenerator({
 
         const used = (Date.now() - startedAt) / 1000;
         if (secondsLeft() - used <= 0 && index + 1 < planned.outline.length) {
-          addUsage(used);
           setLeft(0);
           toast.warning("Free time for today ran out — keeping the chapters written so far.");
           break;
         }
+
       }
 
       const book: Book = {
